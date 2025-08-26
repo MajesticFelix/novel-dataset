@@ -114,7 +114,7 @@ class NovelScraper:
         :returns: A list with the novel ids of all currently listed novels.
         """
         if self.debug:
-            novels_num_pages = 1
+            novels_num_pages = 100
             print('Debug run, using 1 page with novels.')
         else:
             print('Full run, obtaining number of pages with novels...')
@@ -158,6 +158,9 @@ class NovelScraper:
         """
         soup = BeautifulSoup(page.text, 'html.parser')
         table = soup.find('div', attrs={'class': 'w-blog-content other'})
+        if table is None:
+            print(f"Warning: Could not find table element on page. Page content preview: {page.text[:200]}...")
+            return set()
         novels = table.find_all('div', attrs={'class': 'search_title'})
         novel_ids = [novel.find('span', attrs={'class': 'rl_icons_en'}).get('id')[3:] for novel in novels]
         novel_ids = {int(n) for n in novel_ids}
@@ -187,6 +190,9 @@ class NovelScraper:
         gen_info['cover_url'] = get_value(content.find('div', class_='seriesimg'),
                                           check=lambda e: e.img and e.img.get('src'),
                                           parse=lambda e: e.img['src'])
+        gen_info['description'] = get_value(content.find('div', attrs={'id': 'editdescription'}),
+                                           check=lambda e: e.find_all('p'),
+                                           parse=lambda e: ' '.join([p.get_text().strip() for p in e.find_all('p') if p.get_text().strip()]))
         gen_info['assoc_names'] = get_value(content.find('div', attrs={'id': 'editassociated'}),
                                             check=lambda e: e, parse=lambda e: list(e.stripped_strings))
         gen_info['original_language'] = get_value(content.find('div', attrs={'id': 'showlang'}),
@@ -332,7 +338,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', type=str2bool, nargs='?', const=True, default=False)
     parser.add_argument('--delay', type=float, default=0.5)
     parser.add_argument('--novel_id', type=int, default=-1)
-    parser.add_argument('--version_number', type=str, default='0.1.5')
+    parser.add_argument('--version_number', type=str, default='0.1.6')
     parser.add_argument('--format', type=str, choices=['csv', 'json', 'both'], default='csv',
                         help="Export format: csv, json, or both")
     args = parser.parse_args()
